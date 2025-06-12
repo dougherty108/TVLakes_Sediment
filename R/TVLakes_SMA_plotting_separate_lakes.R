@@ -122,8 +122,6 @@ for (i in seq_along(files)) {
 }
 
 
-
-
 ######## plotting for comparison figure in manuscript; SMA vs RGB
 # Lake Fryxell
 library(ggpubr)
