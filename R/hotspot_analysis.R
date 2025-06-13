@@ -14,13 +14,24 @@ setwd("~charliedougherty")
 # change to your output directory with satellite outputs
 
 ########################## BONNEY ########################## 
-tif_dir <- "Google Drive/My Drive/EarthEngine/landsat/20250611"
+tif_dir <- "Google Drive/My Drive/EarthEngine/landsat/20250612"
 
 # Get list of all .tif files in the directory
 tif_files <- list.files(tif_dir, pattern = "LANDSAT_MIE.*\\.tif$", full.names = TRUE)
 
+# Use the extent and resolution of the first raster as a reference
+ref_rast <- rast(tif_files[1])[[1]]
+
+# Resample all rasters to match the reference
+aligned_rasters <- lapply(tif_files, function(f) {
+  r <- rast(f)[[1]]
+  resample(r, ref_rast, method = "bilinear")  # or "near" for categorical data
+})
+
+raster_stack <- rast(aligned_rasters)
+
 # Load only the first band of each raster
-raster_stack <- rast(lapply(tif_files, function(f) rast(f)[[1]]))  # Adjust `[[1]]` to desired band index
+#raster_stack <- rast(lapply(tif_files, function(f) rast(f)[[1]]))  # Adjust `[[1]]` to desired band index
 
 # Compute the mean across all layers (ignoring NA values)
 mean_raster <- app(raster_stack, fun=mean, na.rm = F)

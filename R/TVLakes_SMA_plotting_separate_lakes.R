@@ -9,7 +9,7 @@ library(MetBrewer)
 library(RColorBrewer)
 library(ggspatial)
 
-setwd("~/Google Drive/My Drive/EarthEngine/landsat/20250325")
+setwd("~/Google Drive/My Drive/EarthEngine/landsat/20250612")
 files <- list.files(pattern = ".tif")
 
 # Select color palette
@@ -17,11 +17,11 @@ met_palette <- MetBrewer::met.brewer("Hokusai2")
 
 # Extract type from filename
 get_type <- function(filename) {
-  str_extract(filename, "(?<=LANDSAT_)(FRY|HOA|BON)(?=_unmix)")
+  str_extract(filename, "(?<=LANDSAT_)(FRY|HOA|BON|MIE)(?=_unmix)")
 }
 
 # Create output directories for each type
-output_base <- "~/Google Drive/My Drive/EarthEngine/plots/20250414"
+output_base <- "~/Google Drive/My Drive/EarthEngine/plots/20250612"
 dir.create(output_base, showWarnings = FALSE)
 
 types <- unique(na.omit(sapply(files, get_type)))
@@ -31,7 +31,7 @@ for (t in types) {
 
 # Loop to create and save plots
 for (i in 1:length(files)) {
-  setwd("~/Google Drive/My Drive/EarthEngine/landsat/20250325")
+  setwd("~/Google Drive/My Drive/EarthEngine/landsat/20250612")
   
   raster_file <- rast(files[[i]])
   raster_file <- project(raster_file, "EPSG:32758")
@@ -67,10 +67,10 @@ for (i in 1:length(files)) {
 
 
 ######## USE THE BELOW IF YOU HAVE TO PLOT ONLY A SINGLE LAKE OUT OF THE DIRECTORY #########
-setwd("~/Google Drive/My Drive/EarthEngine/landsat/20250325")
+setwd("~/Google Drive/My Drive/EarthEngine/landsat/20250612")
 
 # Filter files to only include those with "HOA"
-files <- list.files(pattern = "LANDSAT_HOA.*\\.tif$")
+files <- list.files(pattern = "LANDSAT_MIE.*\\.tif$")
 
 # Select color palette
 met_palette <- MetBrewer::met.brewer("Hokusai2")
@@ -81,13 +81,13 @@ get_type <- function(filename) {
 }
 
 # Create output directory for HOA
-output_base <- "~/Google Drive/My Drive/EarthEngine/plots/20250409"
-hoa_output <- file.path(output_base, "HOA")
+output_base <- "~/Google Drive/My Drive/EarthEngine/plots/20250612"
+hoa_output <- file.path(output_base, "MIE")
 dir.create(hoa_output, showWarnings = FALSE, recursive = TRUE)
 
 # Loop to create and save plots
 for (i in seq_along(files)) {
-  setwd("~/Google Drive/My Drive/EarthEngine/landsat/20250325")
+  setwd("~/Google Drive/My Drive/EarthEngine/landsat/20250612")
   
   raster_file <- rast(files[[i]])
   raster_file <- project(raster_file, "EPSG:32758")
@@ -102,23 +102,21 @@ for (i in seq_along(files)) {
   year <- str_extract(files[[i]], "20\\d{2}-\\d{2}-\\d{2}")
   type <- get_type(files[[i]])
   
-  if (!is.na(type) && type == "HOA") {
-    plot_path <- file.path(hoa_output, paste0("LANDSAT_plot_HOA_", year, ".png"))
+  plot_path <- file.path(hoa_output, paste0("LANDSAT_plot_MIE_", year, ".png"))
     
-    ggplot() +
-      geom_raster(data = raster_df, aes(x = x, y = y, fill = sediment_coverage)) +
-      coord_sf(crs = sf::st_crs(32758), datum = sf::st_crs(32758)) +
-      scale_fill_gradientn(colors = met_palette) +
-      labs(title = paste0("HOA - ", year), x = "Easting", y = "Northing") +
-      annotation_north_arrow(location = "tr", which_north = "true",
+  ggplot() +
+    geom_raster(data = raster_df, aes(x = x, y = y, fill = sediment_coverage)) +
+    coord_sf(crs = sf::st_crs(32758), datum = sf::st_crs(32758)) +
+    scale_fill_gradientn(colors = met_palette) +
+    labs(title = paste0("MIE - ", year), x = "Easting", y = "Northing") +
+    annotation_north_arrow(location = "tr", which_north = "true",
                              style = north_arrow_fancy_orienteering) +
-      annotation_scale(location = "bl", width_hint = 0.3) + 
-      theme_linedraw()
+    annotation_scale(location = "bl", width_hint = 0.3) + 
+    theme_linedraw()
     
-    setwd(hoa_output)
-    ggsave(filename = plot_path)
-    print(paste0("Saved plot for HOA - ", year, " (", i, "/", length(files), ")"))
-  }
+  setwd(hoa_output)
+  ggsave(filename = plot_path)
+  print(paste0("Saved plot for MIE - ", year, " (", i, "/", length(files), ")"))
 }
 
 
