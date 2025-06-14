@@ -34,7 +34,7 @@ raster_stack <- rast(aligned_rasters)
 #raster_stack <- rast(lapply(tif_files, function(f) rast(f)[[1]]))  # Adjust `[[1]]` to desired band index
 
 # Compute the mean across all layers (ignoring NA values)
-mean_raster <- app(raster_stack, fun=mean, na.rm = F)
+mean_raster <- app(raster_stack, fun=mean, na.rm = T)
 
 mean_raster = project(mean_raster, "EPSG:32758")
 
@@ -43,8 +43,8 @@ mean_df <- as.data.frame(mean_raster, xy = TRUE)
 
 colnames(mean_df)[3] = "sediment_var"
 
-mean_df_LB = mean_df #|> 
-  #filter(sediment_var < 0.10)
+mean_df_LB = mean_df |> 
+  filter(sediment_var > 0.025)
 
 # Select color palette
 met_palette <- MetBrewer::met.brewer("Derain")
@@ -54,7 +54,7 @@ ggplot() +
   coord_sf(crs = sf::st_crs(32758), datum = sf::st_crs(32758)) +
   scale_fill_gradientn(colors = met_palette) +
   labs(title = "Lake Miers", x = "Easting", y = "Northing",
-       fill = "variance") +
+       fill = "mean") +
   theme_linedraw(base_size = 20) +
   annotation_north_arrow(location = "tr", which_north = "true",
                          style = north_arrow_fancy_orienteering) +

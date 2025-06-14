@@ -67,7 +67,7 @@ for (i in 1:length(files)) {
 
 
 ######## USE THE BELOW IF YOU HAVE TO PLOT ONLY A SINGLE LAKE OUT OF THE DIRECTORY #########
-setwd("~/Google Drive/My Drive/EarthEngine/landsat/20250612")
+setwd("~/Google Drive/My Drive/EarthEngine/landsat/20250613")
 
 # Filter files to only include those with "HOA"
 files <- list.files(pattern = "LANDSAT_MIE.*\\.tif$")
@@ -76,18 +76,18 @@ files <- list.files(pattern = "LANDSAT_MIE.*\\.tif$")
 met_palette <- MetBrewer::met.brewer("Hokusai2")
 
 # Extract type from filename
-get_type <- function(filename) {
-  str_extract(filename, "(?<=LANDSAT_)(FRY|HOA|BON)(?=_unmix)")
-}
+#get_type <- function(filename) {
+#  str_extract(filename, "(?<=LANDSAT_)(FRY|HOA|BON)(?=_unmix)")
+#}
 
 # Create output directory for HOA
-output_base <- "~/Google Drive/My Drive/EarthEngine/plots/20250612"
+output_base <- "~/Google Drive/My Drive/EarthEngine/plots/20250613"
 hoa_output <- file.path(output_base, "MIE")
 dir.create(hoa_output, showWarnings = FALSE, recursive = TRUE)
 
 # Loop to create and save plots
 for (i in seq_along(files)) {
-  setwd("~/Google Drive/My Drive/EarthEngine/landsat/20250612")
+  setwd("~/Google Drive/My Drive/EarthEngine/landsat/20250613")
   
   raster_file <- rast(files[[i]])
   raster_file <- project(raster_file, "EPSG:32758")
