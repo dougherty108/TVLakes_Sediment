@@ -13,11 +13,11 @@ files <- list.files(pattern = ".tif")
 
 # Extract type from filename
 get_type <- function(filename) {
-  str_extract(filename, "(?<=LANDSAT_)(FRY|HOA|BON)(?=_RGB)")
+  str_extract(filename, "(?<=LANDSAT_)(FRY|HOA|BON|MIE)(?=_RGB)")
 }
 
 # Create output directories for each type
-output_base <- "~/Google Drive/My Drive/EarthEngine/plots/RGB_images_v2"
+output_base <- "~/Google Drive/My Drive/EarthEngine/plots/RGB_images_v3"
 dir.create(output_base, showWarnings = FALSE)
 
 types <- unique(na.omit(sapply(files, get_type)))
@@ -54,7 +54,7 @@ for (i in 1:length(files)) {
     year <- str_extract(files[[i]], "20\\d{2}-\\d{2}-\\d{2}")
     type <- get_type(files[[i]])
     
-    if (!is.na(type)) {
+    if (!is.na(type) & type == "MIE") {
       plot_path <- file.path(output_base, type, paste0("RGB_plot_", type, "_", year, ".png"))
       
       ggplot(raster_df, aes(x = x, y = y)) +
@@ -68,7 +68,7 @@ for (i in 1:length(files)) {
         theme_linedraw(base_size = 15) + 
         theme(axis.text.x = element_text(angle = 45, hjust = 1))
       
-      setwd("~/Google Drive/My Drive/EarthEngine/plots/RGB_images_v2")
+      setwd("~/Google Drive/My Drive/EarthEngine/plots/RGB_images_v3")
       ggsave(filename = plot_path)
       print(paste0("Saved plot for ", type, " - ", year, " (", i, "/", length(files), ")"))
     }
