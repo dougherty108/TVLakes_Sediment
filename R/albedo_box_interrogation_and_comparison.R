@@ -62,30 +62,38 @@ ggplot(df_proj, aes(x = X, y = Y, color = RADIATION)) +
 gee_albedo = read_csv("Data/LANDSAT_sediment_abundances_20250403.csv") |> 
   mutate(FLIGHT_DATE = date, 
          week = week(FLIGHT_DATE), 
-         year = year(FLIGHT_DATE)) 
+         year = year(FLIGHT_DATE)) |> 
+  group_by(year, week, lake) |> 
+  summarize(sediment_mean = mean(sediment_abundance), 
+            ice_mean = mean(ice_abundance))
 
 gee_albedo_wholelake= read_csv("Data/LANDSAT_wholelake_mean_20250403.csv") |> 
   mutate(FLIGHT_DATE = date, 
          week = week(FLIGHT_DATE), 
-         year = year(FLIGHT_DATE))
+         year = year(FLIGHT_DATE)) |> 
+  group_by(year, week, lake) |> 
+  summarize(sediment_mean = mean(sediment_abundance), 
+            ice_mean = mean(ice_abundance))
 
 # do a filtering join between the albedo box measurements and gee measurements and we'll compare
 comparison_albedo = df_albedo |> 
-  left_join(gee_albedo_wholelake, by = join_by(week, year))
+  left_join(gee_albedo_wholelake, by = join_by(week, year)) |> 
+  drop_na(lake)
 
-
-ggplot(comparison_albedo, aes(sediment_abundance, mean_rad_diff)) + 
+ggplot(comparison_albedo, aes(ice_mean, mean_radiation)) + 
   geom_point() + 
-  geom_abline() + 
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + 
+  facet_wrap(vars(lake)) + 
   theme_linedraw()
 
 
 comparison_albedo_normal = df_albedo |> 
-  left_join(gee_albedo, by = join_by(week, year))
+  left_join(gee_albedo, by = join_by(week, year)) |> 
+  drop_na()
 
-ggplot(comparison_albedo_normal, aes(ice_abundance, mean_radiation)) + 
+ggplot(comparison_albedo_normal, aes(ice_mean, mean_rad_diff)) + 
   geom_point() + 
-  geom_abline(intercept = 0, slope = 1) + 
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + 
   labs(title = "mean albedo box vs. ice abundance") + 
   facet_wrap(vars(lake)) + 
   theme_linedraw()
