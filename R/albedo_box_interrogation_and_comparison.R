@@ -9,20 +9,25 @@ library(ggmap)
 setwd("~/Documents/R-Repositories/TVLakes_Sediment")
 
 # load albedo box dataset
-
+# start by just looking at the ELB buffered site
 albedo_box = read_csv("Data/ALBEDO_BOX.csv") |> 
-  mutate(DATE_TIME = mdy_hms(DATE_TIME)) |> 
-  drop_na()
+  mutate(DATE_TIME = mdy_hms(DATE_TIME))
+  
+# Convert to sf object (WGS84)
+sf_points <- st_as_sf(albedo_box, coords = c("LONGITUDE", "LATITUDE"), crs = 4326)
+  
+# Transform to EPSG:3031
+sf_proj <- st_transform(sf_points, crs = 3031)
 
-#bounding box
-bbox <- make_bbox(lon = albedo_box$LONGITUDE, lat = albedo_box$LATITUDE, f = 0.1)
+coords <- st_coordinates(sf_proj)
 
-# add the basemap
-basemap <- get_stadiamap(bbox = bbox, zoom = 10)
-
+# Bind back into data.frame
+df_proj <- cbind(data.frame(coords), RADIATION = sf_proj$RADIATION, 
+                 FLIGHT_DATE = sf_proj$FLIGHT_DATE, DATE_TIME = sf_proj$DATE_TIME)
+  
 # plot data
-ggplot(albedo_box, aes(x = LATITUDE, y = LONGITUDE, fill = RADIATION)) + 
-  geom_point() + 
+ggplot(df_proj, aes(x = X, y = Y, color = RADIATION)) + 
+  geom_point(shape = 1) + 
   scale_color_viridis_c() +
   coord_fixed() +
   facet_wrap(~FLIGHT_DATE) + 
@@ -31,9 +36,3 @@ ggplot(albedo_box, aes(x = LATITUDE, y = LONGITUDE, fill = RADIATION)) +
        x = "Longitude", y = "Latitude", color = "Radiation")
 
 
-ggmap(basemap) +
-  geom_point(data = albedo_box, aes(x = LONGITUDE, y = LATITUDE, color = RADIATION), size = 3) +
-  scale_color_viridis_c() +
-  labs(title = "Radiation Levels with Basemap",
-       x = "Longitude", y = "Latitude", color = "Radiation") +
-  theme_minimal()
