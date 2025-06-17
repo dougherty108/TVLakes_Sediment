@@ -24,8 +24,16 @@ coords <- st_coordinates(sf_proj)
 # Bind back into data.frame
 df_proj <- cbind(data.frame(coords), RADIATION = sf_proj$RADIATION, 
                  FLIGHT_DATE = sf_proj$FLIGHT_DATE, DATE_TIME = sf_proj$DATE_TIME) |> 
-  filter(X < 391888 & X > 391608) |> 
-  filter(Y < -1292168 & Y > -1294228)
+  filter((X < 392248 & X > 391248) | (X < 397017 & X > 396017) | (X < 404547 & X > 403547) | (X < 407669 & X > 406669)) |> 
+  filter((Y < -1292698 & Y > -1293698) | (Y < -1289240 & Y > -1289740) | (Y < -1277016 & Y > -1278016) | (Y < -1275276 & Y > -1276276)) |> 
+  mutate(
+    lake = case_when(
+    X < 392248 & X > 391248 ~ "Lake Fryxell", 
+    X < 397017 & X > 396017 ~ "Lake Hoare", 
+    X < 404547 & X > 403547 ~ "East Lake Bonney", 
+    X < 407669 & X > 406669 ~ "West Lake Bonney"
+  )
+  )
   
 df_albedo = df_proj |> 
   group_by(FLIGHT_DATE) |> 
@@ -54,14 +62,12 @@ ggplot(df_proj, aes(x = X, y = Y, color = RADIATION)) +
 gee_albedo = read_csv("Data/LANDSAT_sediment_abundances_20250403.csv") |> 
   mutate(FLIGHT_DATE = date, 
          week = week(FLIGHT_DATE), 
-         year = year(FLIGHT_DATE)) |> 
-  filter(lake == "Lake Fryxell")
+         year = year(FLIGHT_DATE)) 
 
 gee_albedo_wholelake= read_csv("Data/LANDSAT_wholelake_mean_20250403.csv") |> 
   mutate(FLIGHT_DATE = date, 
          week = week(FLIGHT_DATE), 
-         year = year(FLIGHT_DATE)) |> 
-  filter(lake == "Lake Fryxell")
+         year = year(FLIGHT_DATE))
 
 # do a filtering join between the albedo box measurements and gee measurements and we'll compare
 comparison_albedo = df_albedo |> 
@@ -77,8 +83,9 @@ ggplot(comparison_albedo, aes(sediment_abundance, mean_rad_diff)) +
 comparison_albedo_normal = df_albedo |> 
   left_join(gee_albedo, by = join_by(week, year))
 
-
-ggplot(comparison_albedo_normal, aes(sediment_abundance, mean_rad_diff)) + 
+ggplot(comparison_albedo_normal, aes(ice_abundance, mean_radiation)) + 
   geom_point() + 
-  geom_abline() + 
+  geom_abline(intercept = 0, slope = 1) + 
+  labs(title = "mean albedo box vs. ice abundance") + 
+  facet_wrap(vars(lake)) + 
   theme_linedraw()
