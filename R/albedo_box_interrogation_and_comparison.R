@@ -23,9 +23,24 @@ coords <- st_coordinates(sf_proj)
 
 # Bind back into data.frame
 df_proj <- cbind(data.frame(coords), RADIATION = sf_proj$RADIATION, 
-                 FLIGHT_DATE = sf_proj$FLIGHT_DATE, DATE_TIME = sf_proj$DATE_TIME)
+                 FLIGHT_DATE = sf_proj$FLIGHT_DATE, DATE_TIME = sf_proj$DATE_TIME) |> 
+  filter(X < 391888 & X > 391608) |> 
+  filter(Y < -1292168 & Y > -1294228)
   
-# plot data
+df_albedo = df_proj |> 
+  group_by(FLIGHT_DATE) |> 
+  summarize(mean_radiation = mean(RADIATION), 
+            mean_rad_diff = 1-mean_radiation) |> 
+  mutate(FLIGHT_DATE = mdy(FLIGHT_DATE), 
+         week = week(FLIGHT_DATE), 
+         year = year(FLIGHT_DATE))
+
+# plot
+ggplot(df_albedo) + 
+  geom_col(aes(x = FLIGHT_DATE, y = mean_radiation)) + 
+  theme_linedraw()
+  
+# plot data in x and y
 ggplot(df_proj, aes(x = X, y = Y, color = RADIATION)) + 
   geom_point(shape = 1) + 
   scale_color_viridis_c() +
@@ -35,4 +50,35 @@ ggplot(df_proj, aes(x = X, y = Y, color = RADIATION)) +
   labs(title = "Radiation Levels by Location",
        x = "Longitude", y = "Latitude", color = "Radiation")
 
+# load in the GEE albedo estimates and find match ups
+gee_albedo = read_csv("Data/LANDSAT_sediment_abundances_20250403.csv") |> 
+  mutate(FLIGHT_DATE = date, 
+         week = week(FLIGHT_DATE), 
+         year = year(FLIGHT_DATE)) |> 
+  filter(lake == "Lake Fryxell")
 
+gee_albedo_wholelake= read_csv("Data/LANDSAT_wholelake_mean_20250403.csv") |> 
+  mutate(FLIGHT_DATE = date, 
+         week = week(FLIGHT_DATE), 
+         year = year(FLIGHT_DATE)) |> 
+  filter(lake == "Lake Fryxell")
+
+# do a filtering join between the albedo box measurements and gee measurements and we'll compare
+comparison_albedo = df_albedo |> 
+  left_join(gee_albedo_wholelake, by = join_by(week, year))
+
+
+ggplot(comparison_albedo, aes(sediment_abundance, mean_rad_diff)) + 
+  geom_point() + 
+  geom_abline() + 
+  theme_linedraw()
+
+
+comparison_albedo_normal = df_albedo |> 
+  left_join(gee_albedo, by = join_by(week, year))
+
+
+ggplot(comparison_albedo_normal, aes(sediment_abundance, mean_rad_diff)) + 
+  geom_point() + 
+  geom_abline() + 
+  theme_linedraw()
