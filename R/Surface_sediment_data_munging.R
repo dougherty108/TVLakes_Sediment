@@ -2,7 +2,7 @@
 library(tidyverse)
 library(RColorBrewer)
 library(scales)
-librar(ggpubr)
+library(ggpubr)
 
 setwd("~/Documents/R-Repositories/TVLakes_Sediment")
 
