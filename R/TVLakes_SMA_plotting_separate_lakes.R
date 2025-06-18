@@ -124,6 +124,8 @@ for (i in seq_along(files)) {
 # Lake Fryxell
 library(ggpubr)
 
+setwd("~/Google Drive/My Drive/EarthEngine/landsat/20250325")
+
 # load files as raster
 FRY_raster_SMA = rast("LANDSAT_FRY_unmix_mar25_2019-11-06.tif")
 FRY_raster_RGB = rast("../RGB_images/LANDSAT_FRY_RGB_mar07_2019-11-06.tif")
@@ -147,7 +149,9 @@ FRY_raster_RGB_df = as.data.frame(FRY_project_RGB, xy = TRUE) |>
 
 FRY_plot_SMA = ggplot() +
   geom_raster(data = FRY_raster_SMA_df, aes(x = x, y = y, fill = sediment_coverage)) +
-  coord_sf(crs = sf::st_crs(32758), datum = sf::st_crs(32758)) +
+  coord_equal() +
+  coord_sf(crs = sf::st_crs(32758), datum = sf::st_crs(32758)) + 
+  #coord_equal() + 
   scale_fill_gradientn(colors = met_palette) +
   labs(title = paste0("2019-11-06"), x = "Easting", y = "Northing") +
   annotation_north_arrow(location = "tr", which_north = "true",
@@ -156,19 +160,25 @@ FRY_plot_SMA = ggplot() +
   theme_linedraw() + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-FRY_plot_RGB = ggplot(raster_RGB_df, aes(x = x, y = y)) +
+FRY_plot_RGB = ggplot(FRY_raster_RGB_df, aes(x = x, y = y)) +
   geom_raster(aes(fill = rgb(B4, B3, B2))) +
   scale_fill_identity() +
   labs(title = paste0(""), x = "Easting", y = "Northing") +
-  coord_sf(crs = sf::st_crs(32758), datum = sf::st_crs(32758)) + 
+  coord_sf(crs = sf::st_crs(32758), datum = sf::st_crs(32758)) +
+  #coord_equal() + 
   annotation_north_arrow(location = "tr", which_north = "true",
-                         style = north_arrow_fancy_orienteering) +
+                        style = north_arrow_fancy_orienteering) +
   annotation_scale(location = "bl", width_hint = 0.3) + 
   theme_linedraw(base_size = 15) + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        )
 
-ggarrange(FRY_plot_SMA, FRY_plot_RGB)
+ggarrange(FRY_plot_SMA, FRY_plot_RGB, 
+          align = "hv", 
+          widths = c(1, 1))
 
+setwd("~/Documents/R-Repositories/TVLakes_Sediment")
+ggsave("plots/Fryxell_SMA_to_RGB.png")
 
 # Lake Hoare
 
