@@ -2,6 +2,7 @@
 library(tidyverse)
 library(RColorBrewer)
 library(scales)
+librar(ggpubr)
 
 setwd("~/Documents/R-Repositories/TVLakes_Sediment")
 
@@ -170,6 +171,32 @@ ggplot(lakeice1, aes(date_time, z_water_m)) +
 
 ggsave("plots/MCM_LTER_ice_thickness_total_years.png", dpi = 700, 
        height = 8, width = 12)
+
+####### lake ice vs. sediment values Figure #####
+sediment_plot = ggplot(mean_BB, aes(date, sediment_abundance*100, color = month)) + 
+  geom_point(position = position_jitter(width = 0.2, height = 0.1), 
+             size = 2.0) + 
+  facet_wrap(vars(lake)) + 
+  #scale_x_date(labels = date_format("%b"), breaks = "1 month") + 
+  xlab("Date") + ylab("Sediment Abundance (%)") + 
+  #scale_color_brewer(palette = "Set1") +
+  theme_linedraw(base_size = 20)
+
+lakeice_plot = ggplot(lakeice1, aes(date_time, z_water_m)) + 
+  geom_point(size = 2.0) + 
+  geom_smooth(se = T) + 
+  facet_wrap(vars(lake)) + 
+  theme_linedraw(base_size = 20) + 
+  #scale_color_brewer(palette = "Set1") +
+  xlab("Date") + ylab("Ice Thickness (m)")
+
+ggarrange(sediment_plot, lakeice_plot, 
+          align = "hv", 
+          widths = c(1, 1))
+
+ggsave("plots/sediment_ts_lakeice_ts.png", 
+       width = 16, height = 8, dpi = 300)
+
 
 lakeice = lakeice1 |> 
   filter(date_time >= "2016-05-01") |> 
