@@ -251,7 +251,7 @@ ggplot(fulljoined, aes(mean_sed, mean_thickness)) +
   geom_point(aes(color = month), 
              size = 3#, 
              #shape = 21
-             ) + 
+  ) + 
   facet_wrap(vars(lake), scales = "free") + 
   xlab("Mean Sediment Abundance (%)") + ylab("Mean Ice Thickness (m)") + 
   theme_linedraw(base_size = 28) 
@@ -335,7 +335,7 @@ ggsave("plots/jan_only_sed.png",
 li_summary_2 = lakeice |> 
   mutate(week = week(date_time), 
          #month = month(date, label = TRUE)
-         ) |> 
+  ) |> 
   group_by(year, week, lake) |> 
   summarize(mean_thickness = mean(z_water_m, na.rm = T))
 
@@ -364,8 +364,8 @@ peak_solar_week <- fulljoined_2 |>
       week == 52 | 
       week == 1 | 
       week == 2 #|
-      #week == 3
-      )
+    #week == 3
+  )
 
 peak_solar_lm <- peak_solar_week |> 
   group_by(lake) |> 
