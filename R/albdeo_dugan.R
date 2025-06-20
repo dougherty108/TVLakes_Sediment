@@ -84,7 +84,8 @@ unique.dates = difference_inner_join(
   max_dist = list(date = 2),
   distance_col = "date_diff") |> 
   dplyr::select(date.albedo = date.x, date.sed = date.y) |> 
-  distinct(date.albedo, date.sed)
+  distinct(date.albedo, date.sed) |> 
+  filter(date.albedo != '2017-12-07')
 
 # Read the shapefile
 fryxell <- st_read("data/gis/fryxell.shp")
@@ -158,14 +159,32 @@ plotMatch <- function(lake, seddate, albedodate) {
     theme_bw(base_size = 9)
   p1 + p2
   ggsave(paste0('plots/albedoMatchup/',lake,'_',seddate,'.png'), width = 6.5, height = 4, dpi = 500)
+  
+  return(points_with_vals)
 }
 
 # plotMatch('FRY','2017-11-21', '2017-11-22')
 # Data/landsat/20250325/LANDSAT_HOA_unmix_mar25_2016-11-13.tif: Why doesn't this exist
+albedoMatch.FRY = list()
+albedoMatch.BON = list()
+albedoMatch.HOA = list()
 for (i in 1:nrow(unique.dates)) {
-  plotMatch('FRY', as.character(unique.dates[[i,2]]), as.character(unique.dates[[i,1]]))
-  plotMatch('BON', as.character(unique.dates[[i,2]]), as.character(unique.dates[[i,1]]))
-  plotMatch('HOA', as.character(unique.dates[[i,2]]), as.character(unique.dates[[i,1]]))
+  albedoMatch.FRY[[i]] = plotMatch('FRY', as.character(unique.dates[[i,2]]), as.character(unique.dates[[i,1]]))
+  albedoMatch.BON[[i]] = plotMatch('BON', as.character(unique.dates[[i,2]]), as.character(unique.dates[[i,1]]))
+  albedoMatch.HOA[[i]] = plotMatch('HOA', as.character(unique.dates[[i,2]]), as.character(unique.dates[[i,1]]))
   
 }
 
+albedoMatch.FRY = bind_rows(albedoMatch.FRY) |> mutate(lake = 'Lake Fryxell')
+albedoMatch.BON = bind_rows(albedoMatch.BON) |> mutate(lake = 'Lake Bonney')
+albedoMatch.HOA = bind_rows(albedoMatch.HOA) |> mutate(lake = 'Lake Hoare')
+
+albedoMatch = albedoMatch.FRY |> bind_rows(albedoMatch.BON, albedoMatch.HOA) |> 
+  mutate(month = month(date, label = TRUE)) |> 
+  mutate(month = factor(month, levels = c('Oct','Nov','Dec','Jan','Feb')))
+
+ggplot(albedoMatch) +
+  geom_point(aes(RADIATION, y = ice_endmember, color = month), size = 3) +
+  scale_color_manual(values = c('#238a9e','#4ea35e','#d9d138','#eba534','#eb4034')) +
+  facet_wrap(~lake) +
+  theme_bw(base_size = 9)
