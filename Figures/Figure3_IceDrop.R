@@ -5,19 +5,13 @@ library(purrr)
 ## Authors
 # Hilary Dugan, Charlie Dougherty
 
-# Date check 
-cdates = read_csv('Data/MCM_LS8dates.csv') |> 
-  rename(date = `Date (YYYYMMDD)`) |> 
-  arrange(date) |> 
-  select(date)
-sed.dates = data.frame(date = unique(sort(sed$date)))
-# Find dates that are in one vector but not both
-baddates = anti_join(sed.dates, cdates, by = "date") |> filter(year(date) < 2024)
+# These dates are bad for Lake Fryxell due to snow or cloud cover
+baddates = as.Date(c( '2016-12-08', '2017-01-09', '2018-12-25', '2019-12-10', '2019-12-12', '2019-12-29', '2021-11-29'))
 
 # Read in CD GEE sed data
 sed = read_csv("Data/LANDSAT_sediment_abundances_20250403.csv") |> 
   mutate(wateryear = if_else(month(date) >= 10, year(date) + 1, year(date))) |> 
-  filter(!date %in% baddates$date)
+  filter(!date %in% baddates)
 
 # Take Dec-Jan mean sediment for each wateryear 
 sed2 = sed |> 
