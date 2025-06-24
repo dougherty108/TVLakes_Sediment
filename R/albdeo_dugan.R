@@ -3,6 +3,8 @@ library(dplyr)
 library(fuzzyjoin)
 library(raster)
 library(terra)
+library(stringr)
+library(broom)
 
 # NOTE: In some cases, pilots flew too close to the edge of a lake, which necessitated
 # discarding measurements that should be classified as a lake and resulted in low total counts of lake
@@ -24,7 +26,7 @@ lakes_sf <- st_as_sf(lakes, coords = c("lon", "lat"), crs = 4326)
 
 # Read in albedo box data
 abox = read_csv('Data/ALBEDO_BOX.csv') |> 
-  mutate(date = as.Date(mdy_hms(DATE_TIME))) |> 
+  mutate(albedo.date = as.Date(mdy_hms(DATE_TIME))) |> 
   filter(!is.na(LATITUDE))
 # Convert box tibble to sf using LONGITUDE and LATITUDE
 box_sf <- st_as_sf(abox, coords = c("LONGITUDE", "LATITUDE"), crs = 4326)
@@ -41,7 +43,7 @@ within_300m <- st_join(
 )
 # drop NAs for only matched rows
 within_300m_filtered <- within_300m %>% filter(!is.na(lake)) |> 
-  select(date, ALTITUDE, RADIATION, lake)
+  dplyr::select(albedo.date, ALTITUDE, RADIATION, lake)
 
 # Load sediment data
 # These dates are bad for Lake Fryxell due to snow or cloud cover
@@ -54,19 +56,21 @@ sed = read_csv("Data/LANDSAT_sediment_abundances_20250403.csv") |>
 
 # Example: fuzzy join on dates within 2 days
 joined <- difference_inner_join(
-  within_300m_filtered,
+  within_300m_filtered |> rename(date = albedo.date),
   sed,
   by = c("date"),  
-  max_dist = list(date = 3),
+  max_dist = list(date = 2),
   distance_col = "date_diff") |> 
   filter(lake.x == lake.y) |>  # keep only matching lakes 
-  rename(lake = lake.x, LSdate = date.y) |> 
-  group_by(LSdate, lake) |> 
-  summarise_if(is.numeric, mean, na.rm = TRUE) |> 
-  mutate(month = month(LSdate, label = TRUE)) |> 
+  rename(lake = lake.x, sed.date = date.y, albedo.date = date.x) |> 
+  group_by(sed.date, lake) |> 
+  summarise(
+    across(where(is.numeric), ~mean(.x, na.rm = TRUE)),
+    across(where(is.Date), ~first(.x))
+  ) |> 
+  mutate(month = month(sed.date, label = TRUE)) |> 
   mutate(month = factor(month, levels = c('Oct','Nov','Dec','Jan','Feb')))
 
-joined |> filter(lake == 'Lake Fryxell') |> pull(date)
 
 ggplot(joined) +
   geom_point(aes(x = sediment_abundance, y = RADIATION, color = month), size = 3) +
@@ -78,7 +82,7 @@ ggplot(joined) +
 unique(box_proj$date)
 
 unique.dates = difference_inner_join(
-  box_proj,
+  box_proj |> rename(date = albedo.date),
   sed,
   by = c("date"),  
   max_dist = list(date = 2),
@@ -87,20 +91,17 @@ unique.dates = difference_inner_join(
   distinct(date.albedo, date.sed) |> 
   filter(date.albedo != '2017-12-07')
 
-# Read the shapefile
-fryxell <- st_read("data/gis/fryxell.shp")
-# Transform to EPSG:32758
-fryxell_utm <- st_transform(fryxell, crs = 32758) |> 
-  st_buffer(dist = -50) # shrink by 50 m
-
 # Read old lake shapefiles
 lakes = st_read('Data/gis/Lakes_and_Poonds_1970.shp')
 hoare_utm = lakes |> filter(NAME == 'Lake Hoare') |> 
   st_transform(fryxell, crs = 32758) |> 
-  st_buffer(dist = -50) # shrink by 50 m
+  st_buffer(dist = -100) # shrink by 100 m
 bonney_utm = lakes |> filter(NAME == 'Lake Bonney') |> 
   st_transform(fryxell, crs = 32758) |> 
-  st_buffer(dist = -50) # shrink by 50 m
+  st_buffer(dist = -100) # shrink by 100 m
+fryxell_utm = lakes |> filter(NAME == 'Lake Fryxell') |> 
+  st_transform(fryxell, crs = 32758) |> 
+  st_buffer(dist = -100) # shrink by 100 m
 
 plotMatch <- function(lake, seddate, albedodate) {
   # Test albedo box vs. SMA on 2017-11-22
@@ -128,7 +129,7 @@ plotMatch <- function(lake, seddate, albedodate) {
   inside <- st_within(box_proj, shape_utm, sparse = FALSE)[, 1]
   # Filter those points
   points_within <- box_proj[inside, ] |> 
-    filter(date == as.Date(albedodate))
+    filter(albedo.date == as.Date(albedodate))
   
   # Convert raster to data frame for ggplot
   r_df <- as.data.frame(FRY_project_SMA[[1]], xy = TRUE, na.rm = TRUE)
@@ -144,12 +145,15 @@ plotMatch <- function(lake, seddate, albedodate) {
           legend.text = element_text(size = 7))
   
   print(p1)
+  
   # Convert sf points to SpatVector (terra format)
   points_vect <- vect(points_within)
   # Extract raster values at point locations
   vals <- extract(FRY_project_SMA, points_vect)
   # Step 3: Combine with original point attributes
-  points_with_vals <- cbind(points_within, vals[,-1])  # Remove ID column from extract()
+  points_with_vals <- cbind(points_within, vals[,-1]) |>   # Remove ID column from extract()
+    mutate(sed.date = as.Date(seddate), albedo.date = as.Date(albedo.date))
+  
   p2 = ggplot(points_with_vals) +
     geom_point(aes(x = RADIATION, y = ice_endmember)) +
     ylab(paste0('ice, ', seddate)) +
@@ -165,26 +169,151 @@ plotMatch <- function(lake, seddate, albedodate) {
 
 # plotMatch('FRY','2017-11-21', '2017-11-22')
 # Data/landsat/20250325/LANDSAT_HOA_unmix_mar25_2016-11-13.tif: Why doesn't this exist
-albedoMatch.FRY = list()
-albedoMatch.BON = list()
-albedoMatch.HOA = list()
+albedoMatch.FRY.list = list()
+albedoMatch.BON.list = list()
+albedoMatch.HOA.list = list()
 for (i in 1:nrow(unique.dates)) {
-  albedoMatch.FRY[[i]] = plotMatch('FRY', as.character(unique.dates[[i,2]]), as.character(unique.dates[[i,1]]))
-  albedoMatch.BON[[i]] = plotMatch('BON', as.character(unique.dates[[i,2]]), as.character(unique.dates[[i,1]]))
-  albedoMatch.HOA[[i]] = plotMatch('HOA', as.character(unique.dates[[i,2]]), as.character(unique.dates[[i,1]]))
+  albedoMatch.FRY.list[[i]] = plotMatch(lake = 'FRY', seddate = as.character(unique.dates[[i,2]]), albedodate = as.character(unique.dates[[i,1]]))
+  albedoMatch.BON.list[[i]] = plotMatch('BON', as.character(unique.dates[[i,2]]), as.character(unique.dates[[i,1]]))
+  albedoMatch.HOA.list[[i]] = plotMatch('HOA', as.character(unique.dates[[i,2]]), as.character(unique.dates[[i,1]]))
   
 }
 
-albedoMatch.FRY = bind_rows(albedoMatch.FRY) |> mutate(lake = 'Lake Fryxell')
-albedoMatch.BON = bind_rows(albedoMatch.BON) |> mutate(lake = 'Lake Bonney')
-albedoMatch.HOA = bind_rows(albedoMatch.HOA) |> mutate(lake = 'Lake Hoare')
+# Mixing analysis end points
+# band_names <- c("Blue", "Green", "Red", "NIR", "SWIR1", "SWIR2", "Panchromatic")
+# 
+# getDim <- function(filename) {
+#   df.dim = read_csv(filename) |> 
+#     mutate(band_values = str_remove_all(dimmest_band_means, "\\[|\\]")) %>%
+#     separate(band_values, into = paste0(band_names, '_dim'), sep = ",\\s*", convert = TRUE) |> 
+#     mutate(sed.date = as.Date(date)) |> 
+#     dplyr::select(sed.date, Blue_dim:Panchromatic_dim) 
+#     
+#   return(df.dim)
+# }
+# # Mixing analysis end points
+# getBright <- function(filename) {
+#   df.bright = read_csv(filename) |> 
+#     mutate(band_values = str_remove_all(brightest_band_means, "\\[|\\]")) %>%
+#     separate(band_values, into = paste0(band_names, '_bright'), sep = ",\\s*", convert = TRUE) |> 
+#     mutate(sed.date = as.Date(date)) |> 
+#     dplyr::select(sed.date, Blue_bright:Panchromatic_bright) 
+#   
+#   return(df.bright)
+# }
+# 
+# lf.dim = getDim('Data/endMembers/endmembers_output_LF_20250325.csv')
+# lf.bright = getBright('Data/endMembers/endmembers_output_LF_20250325.csv')
+# lb.dim = getDim('Data/endMembers/endmembers_output_LB_20250325.csv')
+
+albedoMatch.FRY = bind_rows(albedoMatch.FRY.list) |> mutate(lake = 'Lake Fryxell') |>
+  left_join(RGB.LF |> dplyr::select(-lake))
+albedoMatch.FRY.first = albedoMatch.FRY |> group_by(sed.date) |> summarise_all(first)
+
+albedoMatch.BON = bind_rows(albedoMatch.BON.list) |> mutate(lake = 'Lake Bonney') |> 
+  left_join(RGB.LB |> dplyr::select(-lake))
+albedoMatch.BON.first = albedoMatch.BON |> group_by(sed.date) |> summarise_all(first)
+
+albedoMatch.HOA = bind_rows(albedoMatch.HOA.list) |> mutate(lake = 'Lake Hoare')|>
+  left_join(RGB.LH |> dplyr::select(-lake))
+albedoMatch.HOA.first = albedoMatch.HOA |> group_by(sed.date) |> summarise_all(first)
 
 albedoMatch = albedoMatch.FRY |> bind_rows(albedoMatch.BON, albedoMatch.HOA) |> 
-  mutate(month = month(date, label = TRUE)) |> 
+  mutate(month = month(sed.date, label = TRUE)) |> 
   mutate(month = factor(month, levels = c('Oct','Nov','Dec','Jan','Feb')))
+
+ggplot(albedoMatch |> filter(lake == 'Lake Fryxell')) +
+  geom_smooth(aes(RADIATION, y = ice_endmember, group = albedo.date), method = 'lm') +
+  geom_point(aes(RADIATION, y = ice_endmember, color = month), size = 1) +
+  scale_color_manual(values = c('#238a9e','#4ea35e','#d9d138','#eba534','#eb4034')) +
+  theme_bw(base_size = 9)
 
 ggplot(albedoMatch) +
   geom_point(aes(RADIATION, y = ice_endmember, color = month), size = 3) +
   scale_color_manual(values = c('#238a9e','#4ea35e','#d9d138','#eba534','#eb4034')) +
   facet_wrap(~lake) +
   theme_bw(base_size = 9)
+
+# Test whether reflectance explains variation in the intercepts of RADIATION ~ ice_endmember per date.
+# Fit a linear model per date:
+model_results <- albedoMatch.FRY %>%
+  group_by(sed.date) %>%
+  do(tidy(lm(RADIATION ~ ice_endmember, data = .))) %>%
+  ungroup()
+
+intercepts <- model_results %>%
+  filter(term == "(Intercept)") %>%
+  dplyr::select(sed.date , intercept = estimate) |> 
+  left_join(albedoMatch.FRY.first |> dplyr::select(sed.date, albedo.date, Blue_dim:B4mean), by = "sed.date")
+
+summary(lm(intercept ~ B2mean, data = intercepts))
+
+ggplot(intercepts, aes(x = B2mean, y = intercept)) +
+  geom_point(aes(color = as.character(albedo.date))) +
+  geom_smooth(method = "lm") +
+  labs(x = "Reflectance", y = "Radiation Intercept (at ice_endmember = 1)")
+
+model <- lm(RADIATION ~ ice_endmember * B2mean, data = albedoMatch.FRY)
+summary(model)
+
+# Test whether reflectance explains variation in the intercepts of RADIATION ~ ice_endmember per date.
+# Fit a linear model per date:
+model_results <- albedoMatch.HOA %>%
+  group_by(sed.date) %>%
+  do(tidy(lm(RADIATION ~ ice_endmember, data = .))) %>%
+  ungroup()
+
+intercepts <- model_results %>%
+  filter(term == "(Intercept)") %>%
+  dplyr::select(sed.date , intercept = estimate) |> 
+  left_join(albedoMatch.HOA.first |> dplyr::select(sed.date, albedo.date, B2mean:B4mean), by = "sed.date")
+
+summary(lm(intercept ~ B2mean, data = intercepts))
+
+ggplot(intercepts, aes(x = B2mean, y = intercept)) +
+  geom_point(aes(color = as.character(albedo.date))) +
+  geom_smooth(method = "lm") +
+  labs(x = "Reflectance", y = "Radiation Intercept (at ice_endmember = 1)")
+
+model <- lm(RADIATION ~ ice_endmember * B2mean, data = albedoMatch.HOA)
+summary(model)
+
+# Test whether reflectance explains variation in the intercepts of RADIATION ~ ice_endmember per date.
+# Fit a linear model per date:
+model_results <- albedoMatch.BON %>%
+  group_by(sed.date) %>%
+  do(tidy(lm(RADIATION ~ ice_endmember, data = .))) %>%
+  ungroup()
+
+intercepts <- model_results %>%
+  filter(term == "(Intercept)") %>%
+  dplyr::select(sed.date , intercept = estimate) |> 
+  left_join(albedoMatch.BON.first |> dplyr::select(sed.date, albedo.date, B2mean:B4mean), by = "sed.date")
+
+summary(lm(intercept ~ B2mean, data = intercepts))
+
+ggplot(intercepts, aes(x = B2mean, y = intercept)) +
+  geom_point(aes(color = as.character(albedo.date))) +
+  geom_smooth(method = "lm") +
+  labs(x = "Reflectance", y = "Radiation Intercept (at ice_endmember = 1)")
+
+model <- lm(RADIATION ~ ice_endmember * B2mean, data = albedoMatch.BON)
+summary(model)
+
+
+######################### Export sediment/albedo model for Lake Fryxell #######################
+m1 = 1.25031
+m2 = 0.27334
+b = -0.57080
+
+albedo.LF = read_csv('Data/LANDSAT_sediment_abundances_20250403.csv') |> filter(lake == 'Lake Fryxell') |> 
+  left_join(RGB.LF |> rename(date = sed.date)) |> 
+  mutate(albedo = m1*B2mean + m2*ice_abundance + b)
+
+write_csv(albedo.LF, 'Data/LFalbedoModel.csv')
+
+ggplot(sed) +
+  geom_point(aes(x = date, y = ice_abundance)) +
+  geom_point(aes(x = date, y = albedo), col = 'red') +
+  theme_bw()
+

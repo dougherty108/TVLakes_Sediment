@@ -18,7 +18,7 @@ sed2 = sed |>
   filter(month(date) %in% c(12,1)) |>
   # filter(yday(date) >= 330 | yday(date) <= 31) |>
   group_by(lake, wateryear) |> 
-  summarise(sed = median(sediment_abundance, na.rm = T))
+  summarise(sed = mean(sediment_abundance, na.rm = T))
 
 # Read in ice thickness data from MCM database 
 ice = read_csv('Data/mcmlter-lake-ice_thickness-20250218_0_2025.csv') |> 
@@ -60,7 +60,7 @@ ggplot(sed.join) +
   facet_wrap(~lake, scales = "free_x") +
   theme_bw(base_size = 9)
 
-ggsave("Figures/Figure3_iceDrop.png", 
+ggsave("Figures/Figure3_iceDrop.png",
        height = 4, width = 6.5, dpi = 500)
 
 # None of these are significant, but linear models aren't very robust with only 6 values 
