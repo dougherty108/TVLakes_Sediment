@@ -9,8 +9,9 @@ library(ggpubr)
 library(ggspatial)
 library(MetBrewer)
 
-
 ###################### Create mean from raster stack #################
+# These dates are bad for Lake Fryxell due to snow or cloud cover
+baddates = as.Date(c( '2016-12-08', '2017-01-09', '2018-12-25', '2019-12-10', '2019-12-12', '2019-12-29', '2021-11-29', '2016-12-17', '2023-01-01'))
 
 process_mean_raster <- function(lake) {
   tif_dir <- "Data/landsat/20250325"
@@ -18,6 +19,10 @@ process_mean_raster <- function(lake) {
   # Define directory and search pattern
   pattern <- paste0("LANDSAT_", lake, ".*\\.tif$")
   tif_files <- list.files(tif_dir, pattern = pattern, full.names = TRUE)
+  
+  # Remove bad dates 
+  date_string <- str_extract(tif_files, "\\d{4}-\\d{2}-\\d{2}")
+  tif_files = tif_files[!date_string %in% baddates]
   
   if (length(tif_files) == 0) {
     stop("No matching .tif files found.")
@@ -95,15 +100,12 @@ lf.dim.sf = getDim.sf('Data/endMembers/endmembers_output_LF_20250325.csv')
 lh.dim.sf = getDim.sf('Data/endMembers/endmembers_output_LH_20250325.csv')
 lb.dim.sf = getDim.sf('Data/endMembers/endmembers_output_LB_20250325.csv')
 
-
-
-
 ########################## PLOTS #############################
 
 ph.bon = ggplot() +
   geom_raster(data = mean_df_LB, aes(x = x, y = y, fill = sqrt((sediment_mean)*100))) +
-  geom_sf(data = lb.dim.sf, size = 2, col = 'gold') +
-  geom_sf(data = lb.bright.sf, size = 2, col = 'gold3') +
+  # geom_sf(data = lb.dim.sf, size = 2, col = 'gold') +
+  # geom_sf(data = lb.bright.sf, size = 2, col = 'gold3') +
   coord_sf(crs = sf::st_crs(32758), datum = sf::st_crs(32758)) +
   scale_fill_met_c(name = "Isfahan1", direction = -1) +
   labs(title = "Lake Bonney", x = "Easting", y = "Northing", fill = "mean") +
@@ -126,8 +128,8 @@ ph.hor <- ggplot() +
 
 ph.frx <- ggplot() +
   geom_raster(data = mean_df_LF, aes(x = x, y = y, fill = sqrt((sediment_mean)*100))) +
-  geom_sf(data = lf.dim.sf, size = 2, col = 'gold') +
-  geom_sf(data = lf.bright.sf, size = 2, col = 'gold3') +
+  # geom_sf(data = lf.dim.sf, size = 2, col = 'gold') +
+  # geom_sf(data = lf.bright.sf, size = 2, col = 'gold3') +
   coord_sf(crs = sf::st_crs(32758), datum = sf::st_crs(32758)) +
   scale_fill_met_c(name = "Isfahan1", direction = -1) +
   labs(title = "Lake Fryxell", x = "Easting", y = "Northing",

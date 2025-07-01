@@ -12,6 +12,17 @@ library(patchwork)
 
 files <- list.files(path = 'Data/20250325/', pattern = ".tif", full.names = TRUE)
 
+# Create dataframe of lake blue box locations 
+lakes_df <- data.frame(
+  lake = c("Lake Fryxell", "Lake Hoare", "East Lake Bonney", "West Lake Bonney"),
+  lat = c(-77.610275, -77.627703, -77.713515, -77.720000),
+  lon = c(163.146877, 162.910475, 162.449109, 162.299291)
+)
+# Convert to sf object
+lakes_sf <- st_as_sf(lakes_df, coords = c("lon", "lat"), crs = 4326)  # WGS84
+lakes_utm <- st_transform(lakes_sf, crs = 32758)
+
+
 # Select color palette
 met_palette <- MetBrewer::met.brewer("Hokusai2")
 
@@ -82,7 +93,7 @@ smaPlot <- function(SMA_name) {
   # convert to dataframe in order to plot with ggplot
   FRY_raster_SMA_df = as.data.frame(FRY_project_SMA, xy = TRUE) |> 
     drop_na() |> 
-    mutate(sediment_coverage = (1 - ice_endmember))
+    mutate(sediment_coverage = 100*(1 - ice_endmember))
   
   FRY_plot_SMA = ggplot() +
     geom_raster(data = FRY_raster_SMA_df, aes(x = x, y = y, fill = sediment_coverage)) +
@@ -101,7 +112,7 @@ smaPlot <- function(SMA_name) {
       axis.text = element_blank())
 }
 
-print(smaPlot("Data/20250325/LANDSAT_BON_unmix_mar25_2023-01-10.tif"))
+print(smaPlot("Data/landsat/20250325/LANDSAT_BON_unmix_mar25_2023-01-10.tif"))
 
 rgbPlot <- function(RGB_name, label) {
   FRY_raster_RGB = rast(RGB_name) # load files as raster
@@ -114,10 +125,10 @@ rgbPlot <- function(RGB_name, label) {
       B2 = scales::rescale(B2, to = c(0, 1))
     )
   
-  FRY_plot_RGB = ggplot(FRY_raster_RGB_df, aes(x = x, y = y)) +
-    geom_raster(aes(fill = rgb(B4, B3, B2))) +
+  p1 = ggplot(FRY_raster_RGB_df) +
+    geom_raster(aes(x = x, y = y, fill = rgb(B4, B3, B2))) +
     scale_fill_identity() +
-    labs( x = "Easting", y = "Northing") +
+    labs(x = "Easting", y = "Northing") +
     coord_sf(crs = sf::st_crs(32758), datum = sf::st_crs(32758)) + 
     annotation_scale(location = "br", width_hint = 0.3) + 
     annotate('text', x = -Inf, y = Inf, 
@@ -130,16 +141,22 @@ rgbPlot <- function(RGB_name, label) {
       legend.key.width = unit(1, 'cm'),
       legend.margin = margin(t = 0, unit='cm'),
       axis.text = element_blank())
+  return(p1)
 }
 
-print(rgbPlot("Data/RGB_images/LANDSAT_BON_RGB_mar06_2023-01-10.tif", label = 'test')) #test
+print(rgbPlot("Data/landsat/RGB_images/LANDSAT_BON_RGB_mar06_2023-01-10.tif", label = 'test')) #test
 
-smaBonney = smaPlot("Data/20250325/LANDSAT_BON_unmix_mar25_2023-01-10.tif")
-rbgBonney = rgbPlot("Data/RGB_images/LANDSAT_BON_RGB_mar06_2023-01-10.tif", label = 'Lake Bonney, 2023-01-10')
-smaHoare = smaPlot("Data/20250325/LANDSAT_HOA_unmix_mar25_2020-12-24.tif")
-rbgHoare = rgbPlot("Data/RGB_images/LANDSAT_HOA_RGB_mar06_2020-12-24.tif", label = 'Lake Hoare, 2020-12-14')
-smaFryxell = smaPlot("Data/20250325/LANDSAT_FRY_unmix_mar25_2019-11-06.tif")
-rbgFryxell = rgbPlot("Data/RGB_images/LANDSAT_FRY_RGB_mar07_2019-11-06.tif", label = 'Lake Fryxell, 2019-11-06')
+smaBonney = smaPlot("Data/landsat/20250325/LANDSAT_BON_unmix_mar25_2023-01-10.tif")
+rbgBonney = rgbPlot(RGB_name = "Data/landsat/RGB_images/LANDSAT_BON_RGB_mar06_2023-01-10.tif", label = 'Lake Bonney, 2023-01-10') +
+  geom_sf(data = lakes_utm |> filter(lake %in% c('East Lake Bonney', 'West Lake Bonney')), shape = 21, fill = 'gold2', stroke = 0.2)
+
+smaHoare = smaPlot("Data/landsat/20250325/LANDSAT_HOA_unmix_mar25_2020-12-24.tif")
+rbgHoare = rgbPlot("Data/landsat/RGB_images/LANDSAT_HOA_RGB_mar06_2020-12-24.tif", label = 'Lake Hoare, 2020-12-14') +
+  geom_sf(data = lakes_utm |> filter(lake %in% c('Lake Hoare')), shape = 21, fill = 'gold2', stroke = 0.2)
+
+smaFryxell = smaPlot("Data/landsat/20250325/LANDSAT_FRY_unmix_mar25_2019-11-06.tif")
+rbgFryxell = rgbPlot("Data/landsat/RGB_images/LANDSAT_FRY_RGB_mar07_2019-11-06.tif", label = 'Lake Fryxell, 2019-11-06') +
+  geom_sf(data = lakes_utm |> filter(lake %in% c('Lake Fryxell')), shape = 21, fill = 'gold2', stroke = 0.2)
 
 
 rbgFryxell + smaFryxell + 

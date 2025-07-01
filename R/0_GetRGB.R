@@ -38,7 +38,9 @@ df.files.LF = df.files |> filter(lake == 'FRY')
   # filter(date %in% unique.dates$date.sed)
 for (i in 1:nrow(df.files.LF)) {
   RGB.LF.list[[i]] = data.frame(df.files.LF[i,2:3]) |> 
-  bind_cols(getRGB(RGB_name = as.character(df.files.LF[i,1]), usefun = 'mean', shapefile = fryxell_vect))
+  bind_cols(getRGB(RGB_name = as.character(df.files.LF[i,1]), usefun = 'mean', shapefile = fryxell_vect)) |> 
+  bind_cols(getRGB(RGB_name = as.character(df.files.LF[i,1]), usefun = 'max', shapefile = fryxell_vect)) |> 
+  bind_cols(getRGB(RGB_name = as.character(df.files.LF[i,1]), usefun = 'min', shapefile = fryxell_vect))
 }
 
 RGB.LF = bind_rows(RGB.LF.list) |> 
@@ -48,8 +50,7 @@ RGB.LF = bind_rows(RGB.LF.list) |>
 
 # Get max RGB values for Lake Hoare
 RGB.LH.list = list()
-df.files.LH = df.files |> filter(lake == 'HOA') |> 
-  filter(date %in% unique.dates$date.sed)
+df.files.LH = df.files |> filter(lake == 'HOA')
 for (i in 1:nrow(df.files.LH)) {
   RGB.LH.list[[i]] = data.frame(df.files.LH[i,2:3]) |> 
     bind_cols(getRGB(RGB_name = as.character(df.files.LH[i,1]), usefun = 'mean', shapefile = hoare_vect)) |> 
@@ -60,12 +61,11 @@ for (i in 1:nrow(df.files.LH)) {
 RGB.LH = bind_rows(RGB.LH.list) |> 
   rename(sed.date = date) |>
   as_tibble() |> 
-  rename(lake = 'Lake Hoare')
+  mutate(lake = 'Lake Hoare')
 
 # Get max RGB values for Lake Bonney
 RGB.LB.list = list()
-df.files.LB = df.files |> filter(lake == 'BON') |> 
-  filter(date %in% unique.dates$date.sed)
+df.files.LB = df.files |> filter(lake == 'BON')
 for (i in 1:nrow(df.files.LB)) {
   RGB.LB.list[[i]] = data.frame(df.files.LB[i,2:3]) |> 
     bind_cols(getRGB(RGB_name = as.character(df.files.LB[i,1]), usefun = 'mean', shapefile = bonney_vect)) |> 
@@ -76,7 +76,7 @@ for (i in 1:nrow(df.files.LB)) {
 RGB.LB = bind_rows(RGB.LB.list) |> 
   rename(sed.date = date) |>
   as_tibble() |> 
-  rename(lake = 'Lake Bonney')
+  mutate(lake = 'Lake Bonney')
  
 
 
