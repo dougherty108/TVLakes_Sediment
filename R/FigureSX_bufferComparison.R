@@ -1,16 +1,16 @@
 # Compare sediment mean for whole lake vs. 300 m buffered area 
 
-sedBB <- read_csv("Data/LANDSAT_sediment_abundances_20250403.csv") |> 
-  mutate(type = 'lake_monitoring_station') |> 
-  mutate(sediment_abundance = sediment_abundance*100)
-
-sedwholelake <- read_csv("Data/LANDSAT_wholelake_mean_20250403.csv") |> 
-  mutate(type = "whole_lake") |> 
-  mutate(sediment_abundance = sediment_abundance*100)
+# sedBB <- read_csv("Data/LANDSAT_sediment_abundances_20250403.csv") |> 
+#   mutate(type = 'lake_monitoring_station') |> 
+#   mutate(sediment_abundance = sediment_abundance*100)
+# 
+# sedwholelake <- read_csv("Data/LANDSAT_wholelake_mean_20250403.csv") |> 
+#   mutate(type = "whole_lake") |> 
+#   mutate(sediment_abundance = sediment_abundance*100)
 
 # join the two files for easy comparison and plotting
-sedJoin <- full_join(sedBB, sedwholelake,by = join_by(date, lake)) |> 
-  mutate(lake = factor(lake, levels = c('Lake Fryxell', 'Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
+# sedJoin <- full_join(sedBB, sedwholelake,by = join_by(date, lake)) |> 
+#   mutate(lake = factor(lake, levels = c('Lake Fryxell', 'Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
 
 sedJoin = read_csv('DataOut/sedimentResults.csv') |> 
   mutate(lake = factor(lake, levels = c('Lake Fryxell', 'Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))

@@ -71,7 +71,7 @@ BONmet <- read_csv(infile2) |>
 
 # Dugan, H.A., P.T. Doran, and A.G. Fountain. 2025. High-frequency, hourly, and daily measurements from Taylor Glacier Meteorological 
 # Station (TARM), McMurdo Dry Valleys, Antarctica (1994-2025, ongoing) ver 20. Environmental Data Initiative. https://doi.org/10.6073/pasta/f31d224c846e28d556ee5c395dfd461b 
-nUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/7013/20/db11c6825f5b15897d6b868bb92e3788" 
+inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/7013/20/db11c6825f5b15897d6b868bb92e3788" 
 infile1 <- tempfile()
 try(download.file(inUrl1,infile1,method="curl",extra=paste0(' -A "',getOption("HTTPUserAgent"),'"')))
 if (is.na(file.size(infile1))) download.file(inUrl1,infile1,method="auto")
@@ -83,6 +83,7 @@ TAYmet <- read_csv(infile1) |>
   rename(TAY.swradin_wm2 = swradin_wm2)
 
 met = FRXmet |> left_join(HORmet) |> left_join(BONmet) |> left_join(TAYmet)
+
 ggplot(met) +
   geom_point(aes(x = FRX.swradin_wm2, HOR.swradin_wm2))
 

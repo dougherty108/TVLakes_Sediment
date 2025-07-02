@@ -26,12 +26,6 @@ abox = read_csv('Data/ALBEDO_BOX.csv') |>
 # Get meteorological data for Lake Fryxell
 source('R/0_GetMet.R')
 
-# Join with abox data
-abox = abox |> left_join(met, join_by(DATE_TIME_HOUR == date_time)) |> 
-  mutate(albedo = RADIATION * 1000/FRX.swradin_wm2)
-
-summary(abox$albedo)
-            
 # Convert box tibble to sf using LONGITUDE and LATITUDE
 box_sf <- st_as_sf(abox, coords = c("LONGITUDE", "LATITUDE"), crs = 4326)
 
@@ -59,8 +53,14 @@ unique.dates =
 
 # Read old lake shapefiles
 lakes = st_read('Data/gis/Lakes_and_Poonds_1970.shp')
+hoare_utm = lakes |> filter(NAME == 'Lake Hoare') |> 
+  st_transform(crs = 32758) |> 
+  st_buffer(dist = -100) # shrink by 100 m
+bonney_utm = lakes |> filter(NAME == 'Lake Bonney') |> 
+  st_transform(crs = 32758) |> 
+  st_buffer(dist = -100) # shrink by 100 m
 fryxell_utm = lakes |> filter(NAME == 'Lake Fryxell') |> 
-  st_transform(fryxell, crs = 32758) |> 
+  st_transform(crs = 32758) |> 
   st_buffer(dist = -100) # shrink by 100 m
 
 # Plotting function
@@ -78,13 +78,24 @@ plotMatch <- function(lake, seddate, albedodate) {
   
   
   # Filter points that fall within the lake extent 
-  shape_utm = fryxell_utm
+  if (lake == 'FRY') {
+    shape_utm = fryxell_utm
+    usemet = met |> dplyr::select(date_time, swradin_wm2 = FRX.swradin_wm2)
+  } else if (lake == 'HOA') {
+    shape_utm = hoare_utm
+    usemet = met |> dplyr::select(date_time, swradin_wm2 = HOR.swradin_wm2)
+  } else if (lake == 'BON') {
+    shape_utm = bonney_utm
+    usemet = met |> dplyr::select(date_time, swradin_wm2 = TAY.swradin_wm2)
+  } 
     
   # Generate logical vector: TRUE if point is inside raster extent
   inside <- st_within(box_proj, shape_utm, sparse = FALSE)[, 1]
   # Filter those points
   points_within <- box_proj[inside, ] |> 
-    filter(albedo.date == as.Date(albedodate))
+    filter(albedo.date == as.Date(albedodate)) |> 
+    left_join(usemet, join_by(DATE_TIME_HOUR == date_time)) |> 
+    mutate(albedo = RADIATION * 1000/swradin_wm2)
   
   # Convert raster to data frame for ggplot
   r_df <- as.data.frame(FRY_project_SMA[[1]], xy = TRUE, na.rm = TRUE)
@@ -112,7 +123,7 @@ plotMatch <- function(lake, seddate, albedodate) {
   
   p2 = ggplot(points_with_vals) +
     geom_point(aes(x = albedo, y = ice_endmember)) +
-    ylab(paste0('LS8, ', seddate)) +
+    ylab('LS8 Ice Abundance') +
     xlab(paste0('Albedo Box, ', albedodate)) +
     ylim(0,1) +
     xlim(0,1) +
@@ -132,7 +143,26 @@ for (i in 1:nrow(unique.dates)) {
   albedo.FRX.list[[i]] = plotMatch(lake = 'FRY', seddate = as.character(unique.dates[[i,2]]), albedodate = as.character(unique.dates[[i,1]]))
 }
 
-albedo.FRX.list[[1]]
-
 patchwork::wrap_plots(albedo.FRX.list, nrow = 4, ncol = 1)
-ggsave(paste0('plots/albedoMatchup/Fryxell.png'), width = 5, height = 8, dpi = 500)
+ggsave(paste0('Figures/FiguresX_AlbedoFryxell.png'), width = 5, height = 8, dpi = 500)
+
+# Make SI figures of matchups 
+albedo.HOR.list = list()
+for (i in 1:nrow(unique.dates)) {
+  albedo.HOR.list[[i]] = plotMatch(lake = 'HOA', seddate = as.character(unique.dates[[i,2]]), albedodate = as.character(unique.dates[[i,1]]))
+}
+
+patchwork::wrap_plots(albedo.HOR.list, nrow = 4, ncol = 1)
+ggsave(paste0('Figures/FiguresX_AlbedoHoare.png'), width = 5, height = 8, dpi = 500)
+
+
+# Make SI figures of matchups 
+albedo.BON.list = list()
+for (i in 1:nrow(unique.dates)) {
+  albedo.BON.list[[i]] = plotMatch(lake = 'BON', seddate = as.character(unique.dates[[i,2]]), albedodate = as.character(unique.dates[[i,1]]))
+}
+
+patchwork::wrap_plots(albedo.BON.list, nrow = 4, ncol = 1)
+ggsave(paste0('Figures/FiguresX_AlbedoBonney.png'), width = 5, height = 8, dpi = 500)
+
+

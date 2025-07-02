@@ -6,6 +6,9 @@ library(terra)
 library(stringr)
 library(broom)
 
+# Get meteorological data for Lake Fryxell, Hoare, and Bonney
+source('R/0_GetMet.R')
+
 # NOTE: In some cases, pilots flew too close to the edge of a lake, which necessitated
 # discarding measurements that should be classified as a lake and resulted in low total counts of lake
 # measurements (e.g. 7 Dec 15, Table B.1).
@@ -32,8 +35,6 @@ abox = read_csv('Data/ALBEDO_BOX.csv') |>
     DATE_TIME_HOUR = round_date(DATE_TIME, unit = "hour"), 
     albedo.date = as.Date(DATE_TIME))
 
-# Get meteorological data for Lake Fryxell, Hoare, and Bonney
-source('R/0_GetMet.R')
 # # Join with abox data
 # abox = abox |> left_join(FRXmet, join_by(DATE_TIME_HOUR == date_time)) |> 
 #   mutate(albedo = RADIATION * 1000/swradin_wm2)
@@ -187,67 +188,98 @@ for (i in 1:nrow(unique.dates)) {
 # lf.bright = getBright('Data/endMembers/endmembers_output_LF_20250325.csv')
 # lb.dim = getDim('Data/endMembers/endmembers_output_LB_20250325.csv')
 
-# Source('0_GetRGB.R')
+# source('R/0_GetRGB.R')
+# write_csv(RGB.LF, 'DataOut/RGBscenes_LF.csv')
+# write_csv(RGB.LH, 'DataOut/RGBscenes_LH.csv')
+# write_csv(RGB.LB, 'DataOut/RGBscenes_LB.csv')
+RGB.LF = read_csv('DataOut/RGBscenes_LF.csv')
+RGB.LH = read_csv('DataOut/RGBscenes_LH.csv')
+RGB.LB = read_csv('DataOut/RGBscenes_LB.csv')
+
 albedoMatch.FRY = bind_rows(albedoMatch.FRY.list) |> mutate(lake = 'Lake Fryxell') |>
   left_join(RGB.LF |> dplyr::select(-lake))
 summary(lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.FRY))
-model = lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.FRY)
+a.LF.model = lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.FRY)
 # predict albedo for existing data 
-albedoMatch.FRY = albedoMatch.FRY |> bind_cols(albedo.predict = predict(model, newdata = albedoMatch.FRY))
+albedoMatch.FRY = albedoMatch.FRY |> bind_cols(albedo.predict = predict(a.LF.model, newdata = albedoMatch.FRY))
 
 
 albedoMatch.BON = bind_rows(albedoMatch.BON.list) |> mutate(lake = 'Lake Bonney') |> 
   left_join(RGB.LB |> dplyr::select(-lake)) |> 
   filter(albedo.date != as.Date('2017-11-22'))
 summary(lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.BON))
-model = lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.BON)
+a.LB.model = lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.BON)
 # predict albedo for existing data 
-albedoMatch.BON = albedoMatch.BON |> bind_cols(albedo.predict = predict(model, newdata = albedoMatch.BON))
+albedoMatch.BON = albedoMatch.BON |> bind_cols(albedo.predict = predict(a.LB.model, newdata = albedoMatch.BON))
 
 
 albedoMatch.HOA = bind_rows(albedoMatch.HOA.list) |> mutate(lake = 'Lake Hoare')|>
   left_join(RGB.LF |> dplyr::select(-lake))
 summary(lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.HOA))
-model = lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.HOA)
+a.LH.model = lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.HOA)
 # predict albedo for existing data 
-albedoMatch.HOA = albedoMatch.HOA |> bind_cols(albedo.predict = predict(model, newdata = albedoMatch.HOA))
+albedoMatch.HOA = albedoMatch.HOA |> bind_cols(albedo.predict = predict(a.LH.model, newdata = albedoMatch.HOA))
 
-# Overall model using Lake Fryxell and Lake Bonney
-albedoMatch.FRYBON = albedoMatch.FRY |> bind_rows(albedoMatch.BON)
-summary(lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.FRYBON))
-albedo.model = lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.FRYBON)
-
-ggplot(albedoMatch.FRYBON) +
-  geom_point(aes(albedo, y = ice_endmember, color = lake), size = 3) +
-  scale_color_manual(values = c('#238a9e','#4ea35e','#d9d138','#eba534','#eb4034')) + 
-  theme_bw(base_size = 9)
+# # Overall model using Lake Fryxell and Lake Bonney
+# albedoMatch.FRYBON = albedoMatch.FRY |> bind_rows(albedoMatch.BON)
+# summary(lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.FRYBON))
+# albedo.model = lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.FRYBON)
+# 
+# ggplot(albedoMatch.FRYBON) +
+#   geom_point(aes(albedo, y = ice_endmember, color = lake), size = 3) +
+#   scale_color_manual(values = c('#238a9e','#4ea35e','#d9d138','#eba534','#eb4034')) + 
+#   theme_bw(base_size = 9)
 
 # Ok now use this model to predict albedo for all scenes
 RGB.join = RGB.LB |> dplyr::select(lake, sed.date, B2mean) |> mutate(lake = 'West Lake Bonney') |> 
   bind_rows(RGB.LB |> dplyr::select(lake, sed.date, B2mean) |> mutate(lake = 'East Lake Bonney')) |> 
-  # bind_rows(RGB.LF |> dplyr::select(lake, sed.date, B2mean) |> mutate(lake = 'Lake Hoare')) |>
-  bind_rows(RGB.LH |> dplyr::select(lake, sed.date, B2mean)) |> 
+  bind_rows(RGB.LF |> dplyr::select(lake, sed.date, B2mean) |> mutate(lake = 'Lake Hoare')) |>
+  # bind_rows(RGB.LH |> dplyr::select(lake, sed.date, B2mean)) |> 
   bind_rows(RGB.LF |> dplyr::select(lake, sed.date, B2mean))
 
-# How do RGB values cmpare? 
-summary(albedoMatch.FRYBON$B2mean)
-summary(RGB.join$B2mean)
-
-sed.RGB = sed |> 
+# Lake Hoare and Fryxell scenes
+sed.LFLH = sed |> 
+  filter(lake %in% c('Lake Fryxell', 'Lake Hoare')) |> 
   rename(sed.date = date) |> 
   mutate(ice_endmember = 1-sed_mean) |> 
   left_join(RGB.join) |> 
   mutate(month = month(sed.date, label = TRUE)) |> 
   mutate(month = factor(month, levels = c('Oct','Nov','Dec','Jan','Feb'))) %>%
-  mutate(albedo.predict.wholelake = predict(albedo.model, newdata = .)) |> 
+  mutate(albedo.predict.wholelake = predict(a.LF.model, newdata = .)) |> 
   mutate(ice_endmember = 1-sed_mean_bb) %>%
-  mutate(albedo.predict.bb = predict(albedo.model, newdata = .))
+  mutate(albedo.predict.bb = predict(a.LF.model, newdata = .))
+
+sed.LB = sed |> 
+  filter(!lake %in% c('Lake Fryxell', 'Lake Hoare')) |> 
+  rename(sed.date = date) |> 
+  mutate(ice_endmember = 1-sed_mean) |> 
+  left_join(RGB.join) |> 
+  mutate(month = month(sed.date, label = TRUE)) |> 
+  mutate(month = factor(month, levels = c('Oct','Nov','Dec','Jan','Feb'))) %>%
+  mutate(albedo.predict.wholelake = predict(a.LB.model, newdata = .)) |> 
+  mutate(ice_endmember = 1-sed_mean_bb) %>%
+  mutate(albedo.predict.bb = predict(a.LF.model, newdata = .))
+
+
+# sed.RGB = sed |>
+#   rename(sed.date = date) |>
+#   mutate(ice_endmember = 1-sed_mean) |>
+#   left_join(RGB.join) |>
+#   mutate(month = month(sed.date, label = TRUE)) |>
+#   mutate(month = factor(month, levels = c('Oct','Nov','Dec','Jan','Feb'))) %>%
+#   mutate(albedo.predict.wholelake = predict(albedo.model, newdata = .)) |>
+#   mutate(ice_endmember = 1-sed_mean_bb) %>%
+#   mutate(albedo.predict.bb = predict(albedo.model, newdata = .))
+
+sed.RGB = sed.LFLH |> bind_rows(sed.LB) |> 
+  arrange(sed.date)
 
 ggplot(sed.RGB) +
   geom_point(aes(x = albedo.predict.wholelake, y = ice_endmember, color = month), size = 3) +
   scale_color_manual(values = c('#238a9e','#4ea35e','#d9d138','#eba534','#eb4034')) +
   facet_wrap(~lake) +
   theme_bw(base_size = 9)
+
 ggplot(sed.RGB) +
   geom_point(aes(x = albedo.predict.bb, y = ice_endmember, color = month), size = 3) +
   scale_color_manual(values = c('#238a9e','#4ea35e','#d9d138','#eba534','#eb4034')) +

@@ -16,6 +16,7 @@ usecolors = c(
   "#eb4034"   # red
 )
 
+
 ggplot(albedo) +
   geom_path(aes(x = fakedate, y = sed_mean, group = as.factor(wateryear), col = as.factor(wateryear))) +
   geom_point(aes(x = fakedate, y = sed_mean, group = as.factor(wateryear), col = as.factor(wateryear))) +
