@@ -94,12 +94,12 @@ start_time <- min(BOYM$date_time)
 time_model <- start_time + seq(0, by = dt * 86400, length.out = nt)  # Convert dt from days to seconds
 
 
-air_temperature <- read_csv("Data/ice_thickness_model_input_data/air_temp_ELBBB.csv") |> 
+air_temperature <- read_csv("Data/air_temp_ELBBB.csv") |> 
   mutate(date_time = mdy_hm(date_time), 
          airtemp_3m_K = surface_temp_C + 273.15)
 
 # load air temperature data from the West Lake Bonney Lake Monitoring Station, to fill gaps in the ELBBB record
-wlbbb_airtemp <- read_csv('Data/ice_thickness_model_input_data/air_temp_WLBBB.csv') |> 
+wlbbb_airtemp <- read_csv('Data/air_temp_WLBBB.csv') |> 
   mutate(date_time = mdy_hm(date_time), 
          airtemp_3m_K = surface_temp_C + 273.15) |> 
   filter(date_time < "2023-11-01 00:00:00")
@@ -225,7 +225,7 @@ relative_humidity <- BOYM |>
 
 ###################### ICE THICKNESS DATA ######################
 # load ice thickness data and manipulate for easier plotting
-ice_thickness <- read_csv("Data/ice_thickness_model_input_data/mcmlter-lake-ice_thickness-20250218_0_2025.csv") |>
+ice_thickness <- read_csv("Data/mcmlter-lake-ice_thickness-20250218_0_2025.csv") |>
   mutate(date_time = mdy_hm(date_time), 
          z_water_m = z_water_m*-1) |> 
   filter(location_name == "East Lake Bonney") |> 
@@ -234,13 +234,13 @@ ice_thickness <- read_csv("Data/ice_thickness_model_input_data/mcmlter-lake-ice_
 
 ###################### ALBEDO DATA ######################
 # Load and prepare the data
-albedo_orig <- read_csv("Data/ice_thickness_model_input_data/LANDSAT_sediment_abundances_20250403.csv") |>  
-  mutate(sediment = sediment_abundance) |> 
+albedo_orig <- read_csv("DataOut/AlbedoModel.csv") |>  
+ # mutate(sediment = sediment_abundance) |> 
   filter(lake == "East Lake Bonney") |> 
-  mutate(date = ymd(date),  # or ymd() if no time data is present, adjust as needed
-         month = month(date), 
-         year = year(date)) |> 
-  drop_na(sediment)
+  mutate(date = ymd(sed.date),  # or ymd() if no time data is present, adjust as needed
+         month = month(sed.date), 
+         year = year(sed.date)) |> 
+  drop_na(albedo.predict.bb)
 
 # Generate 15-minute intervals across the full date range
 start_time <- floor_date(min(albedo_orig$date), unit = "15 minutes")
@@ -249,9 +249,9 @@ time_15min <- tibble(time = seq(from = start_time, to = end_time, by = "15 mins"
 
 # Join 15-minute grid with original data
 albedo1 <- time_15min |> 
-  left_join(albedo_orig |> select(date, ice_abundance), by = c("time" = "date")) |> 
+  left_join(albedo_orig |> select(date, albedo.predict.bb), by = c("time" = "date")) |> 
   arrange(time) |> 
-  fill(ice_abundance, .direction = "down")
+  fill(albedo.predict.bb, .direction = "down")
 
 
 ###################### Interpolate Data to match model time steps #####################
@@ -291,7 +291,7 @@ LWR_out_interp <- approx(
 #reshape albedo (use this for the GEE dataset)
 albedo_interp <- approx(
   x = as.numeric(albedo1$time),                     # Original dates as numeric
-  y = albedo1$ice_abundance,                          # Albedo means to interpolate
+  y = albedo1$albedo.predict.bb,                          # Albedo means to interpolate
   xout = as.numeric(time_model),                   # Target times as numeric
   rule = 2                                         # Constant extrapolation for out-of-bound values
 )$y
@@ -341,7 +341,8 @@ time_series <- tibble(
   SW_in = sw_interp,                           # Interpolated shortwave radiation w/m2
   LWR_in = LWR_in_interp,                      # Interpolated incoming longwave radiation w/m2
   LWR_out = LWR_out_interp,                    # Interpolated outgoing longwave radiation w/m2
-  albedo = (0.14 + ((albedo_interp)*0.6959)),  # albedo, unitless (lower albedo value from measured BOYM data)
+  #albedo = (0.14 + ((albedo_interp)*0.6959)),  # albedo, unitless (lower albedo value from measured BOYM data)
+  albedo = albedo_interp,
   pressure = pressure_interp,                  # Interpolated air pressure, Pa
   wind = wind_interp,                          # interpolated wind speed, m/s
   delta_T = T_air - lag(T_air),                # difference in air temperature, for later flux calculation
