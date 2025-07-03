@@ -66,7 +66,7 @@ getSediment <- function(usefile) {
   
   uselake = lakes_utm |> filter(lake == lakename)
   # Create 300 m buffer
-  lakes_buffer <- st_buffer(uselake, dist = 200)
+  lakes_buffer <- st_buffer(uselake, dist = 100)
   # Check buffer
 
   # Mask raster to lake 

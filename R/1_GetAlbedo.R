@@ -8,6 +8,7 @@ library(broom)
 
 # Get meteorological data for Lake Fryxell, Hoare, and Bonney
 source('R/0_GetMet.R')
+source('R/0_GetDDAF.R')
 
 # NOTE: In some cases, pilots flew too close to the edge of a lake, which necessitated
 # discarding measurements that should be classified as a lake and resulted in low total counts of lake
@@ -202,7 +203,8 @@ summary(lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.FRY))
 a.LF.model = lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.FRY)
 # predict albedo for existing data 
 albedoMatch.FRY = albedoMatch.FRY |> bind_cols(albedo.predict = predict(a.LF.model, newdata = albedoMatch.FRY))
-
+ggplot(albedoMatch.FRY) + geom_point(aes(x = albedo.predict, albedo, col = sed.date)) +
+  geom_abline()
 
 albedoMatch.BON = bind_rows(albedoMatch.BON.list) |> mutate(lake = 'Lake Bonney') |> 
   left_join(RGB.LB |> dplyr::select(-lake)) |> 
@@ -211,6 +213,8 @@ summary(lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.BON))
 a.LB.model = lm(albedo ~ ice_endmember + B2mean, data = albedoMatch.BON)
 # predict albedo for existing data 
 albedoMatch.BON = albedoMatch.BON |> bind_cols(albedo.predict = predict(a.LB.model, newdata = albedoMatch.BON))
+ggplot(albedoMatch.BON) + geom_point(aes(x = albedo.predict, albedo, col = sed.date)) +
+  geom_abline()
 
 
 albedoMatch.HOA = bind_rows(albedoMatch.HOA.list) |> mutate(lake = 'Lake Hoare')|>

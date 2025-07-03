@@ -12,7 +12,7 @@ sed = #read_csv("Data/LANDSAT_sediment_abundances_20250403.csv") |>
 
 # Take Dec-Jan mean sediment/albedo for each wateryear 
 sed2 = sed |> 
-  # filter(month(date) %in% c(12,1)) |>
+  filter(month(date) %in% c(11,12,1)) |>
   # filter(yday(date) >= 350 | yday(date) <= 15) |>
   group_by(lake, wateryear) |> 
   summarise(sed_mean = mean(sed_mean, na.rm = T), 
@@ -48,8 +48,12 @@ ice3 = ice |>
   mutate(ice.year = -(first - last)) |> 
   mutate(ice.diff = c(-diff(first), NA)) # calculate difference between years
 
+# climate
+dd.wide = dd |> dplyr::select(-metlocid) |> pivot_wider(names_from = cutoff, values_from = dd, names_prefix = 'dd_')
+
 # Join sediment and ice thickness data 
 sed.join = ice3 |> left_join(sed2, by = join_by(lake, wateryear)) |> 
+  left_join(FRXmet.daily) |> 
   mutate(lake = factor(lake, levels = c('Lake Fryxell', 'Lake Hoare',
                                         'East Lake Bonney', 'West Lake Bonney')))
 
@@ -64,13 +68,14 @@ sed.join = ice3 |> left_join(sed2, by = join_by(lake, wateryear)) |>
 #   facet_wrap(~lake, scales = "free_x", nrow = 1) +
 #   theme_bw(base_size = 9)
 
+
 p2 = ggplot(sed.join) +
   geom_smooth(data = sed.join |> filter(wateryear != 2020), 
               aes(x = albedo.predict.wholelake, y = ice.diff), method = 'lm', 
               color = 'black', linetype = 2, linewidth = 0.4) +
   geom_point(aes(x = albedo.predict.wholelake, y = ice.diff), size = 3) +
   geom_point(data = sed.join |> filter(wateryear == 2020), aes(x = albedo.predict.wholelake, y = ice.diff), size = 3, col = 'red3') +
-  xlab('Mean Dec-Jan albedo') +
+  xlab('Mean Nov-Jan albedo') +
   ylab('∆ Ice thickness between years') +
   facet_wrap(~lake, scales = "free_x", nrow = 1) +
   theme_bw(base_size = 9)
@@ -80,7 +85,7 @@ p3 = ggplot(sed.join) +
               aes(x = albedo.predict.wholelake, y = ice.year), method = 'lm', 
               color = 'black', linetype = 2, linewidth = 0.4) +
   geom_point(aes(x = albedo.predict.wholelake, y = ice.year), size = 3) +
-  xlab('Albedo') +
+  xlab('Mean Nov-Jan albedo') +
   ylab('∆ Ice thickness within year') +
   facet_wrap(~lake, scales = "free_x", nrow = 1) +
   theme_bw(base_size = 9)
@@ -92,16 +97,15 @@ ggsave("Figures/Figure3_iceDrop.png",
 
 # None of these are significant, but linear models aren't very robust with only 6 values 
 sed.join |> group_by(lake) %>%
-  filter(wateryear != 2020) |> 
   nest() %>%
   mutate(
-    model = purrr::map(data, ~ lm(ice.diff ~ albedo.predict.wholelake, data = .x)),
+    model = purrr::map(data, ~ lm(ice.diff ~ albedo.predict.wholelake + warmsunnies + dd, data = .x)),
     results = purrr::map(model, tidy)
   ) %>%
   unnest(results)
 
+
 sed.join |> group_by(lake) %>%
-  filter(wateryear != 2020) |> 
   nest() %>%
   mutate(
     model = purrr::map(data, ~ lm(ice.year ~ albedo.predict.bb, data = .x)),
@@ -116,7 +120,7 @@ p2_bb = ggplot(sed.join) +
               color = 'black', linetype = 2, linewidth = 0.4) +
   geom_point(aes(x = albedo.predict.bb, y = ice.diff), size = 3) +
   geom_point(data = sed.join |> filter(wateryear == 2020), aes(x = albedo.predict.bb, y = ice.diff), size = 3, col = 'red3') +
-  xlab('Mean Dec-Jan albedo') +
+  xlab('Mean Nov-Jan albedo') +
   ylab('∆ Ice thickness between years') +
   facet_wrap(~lake, scales = "free_x", nrow = 1) +
   theme_bw(base_size = 9)
@@ -126,7 +130,7 @@ p3_bb = ggplot(sed.join) +
               aes(x = albedo.predict.bb, y = ice.year), method = 'lm', 
               color = 'black', linetype = 2, linewidth = 0.4) +
   geom_point(aes(x = albedo.predict.bb, y = ice.year), size = 3) +
-  xlab('Albedo') +
+  xlab('Mean Nov-Jan Albedo') +
   ylab('∆ Ice thickness between seasons') +
   facet_wrap(~lake, scales = "free_x", nrow = 1) +
   theme_bw(base_size = 9)

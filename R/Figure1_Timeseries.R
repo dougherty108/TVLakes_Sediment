@@ -65,9 +65,11 @@ mean_BB <- #read_csv("Data/LANDSAT_sediment_abundances_20250403.csv") |>
 lake_means <- mean_BB |> 
   group_by(lake, year = year(date)) |> 
   summarise(mean_sediment = mean(sed_mean * 100, na.rm = TRUE), 
+            mean_albedo_bb = mean(albedo.predict.bb, na.rm = T), 
             mean_albedo = mean(albedo.predict.wholelake, na.rm = T)) |> 
   group_by(lake) |> 
   summarise(mean_sediment = mean(mean_sediment, na.rm = T), 
+            mean_albedo_bb = mean(mean_albedo_bb, na.rm = T),
             mean_albedo = mean(mean_albedo, na.rm = T))
 
 ##### Plot by lake with lake-specific mean lines
@@ -94,6 +96,18 @@ p.albedo = ggplot(mean_BB, aes(date, albedo.predict.wholelake, fill = month)) +
   ylab("Estimated Albedo") + 
   theme_bw(base_size = 9) +
   theme(axis.title.x = element_blank()); p.albedo
+
+ggplot(mean_BB, aes(date, albedo.predict.bb, fill = month)) + 
+  geom_hline(data = lake_means, aes(yintercept = mean_albedo_bb), 
+             linetype = "dashed", color = "red4", linewidth = 0.8) +
+  geom_point(position = position_jitter(width = 0.2, height = 0.1), size = 1.5, shape = 21, stroke = 0.2) + 
+  scale_fill_manual(values = c('#238a9e','#4ea35e','#d9d138','#eba534','#eb4034')) +
+  facet_wrap(vars(lake), nrow = 1) + 
+  xlim(as.Date('2016-10-01'), as.Date('2025-02-01')) +
+  xlab("Date") + 
+  ylab("Estimated Albedo") + 
+  theme_bw(base_size = 9) +
+  theme(axis.title.x = element_blank())
 
 ####################### Combine plots ############################
 p.ice / p.ice2 / p.sed / p.albedo + 
