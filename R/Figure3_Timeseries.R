@@ -18,8 +18,7 @@ mcmIce <- read_csv("Data/mcmlter-lake-ice_thickness-20250218_0_2025.csv") |>
   filter(lake == "Lake Fryxell" | lake == "Lake Hoare" | lake == "East Lake Bonney" | lake == "West Lake Bonney") |> 
   filter(!grepl("^B", location)) |> 
   filter(year(date_time) >= 1995) |> 
-  mutate(lake = factor(lake, levels = c('Lake Fryxell', 'Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
-
+  mutate(lake = factor(lake, levels = c('West Lake Bonney',  'East Lake Bonney', 'Lake Hoare', 'Lake Fryxell')))
   
 mcmIce.fall = mcmIce |> filter(month(date_time) >= 11) 
 
@@ -58,7 +57,7 @@ mean_BB <- #read_csv("Data/LANDSAT_sediment_abundances_20250403.csv") |>
   #        type = 'lake_monitoring_station', 
   #        month = month(date, label = TRUE)) |> 
   mutate(month = factor(month, levels = c('Oct','Nov','Dec','Jan','Feb'))) |>
-  mutate(lake = factor(lake, levels = c('Lake Fryxell', 'Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
+  mutate(lake = factor(lake, levels = c('West Lake Bonney',  'East Lake Bonney', 'Lake Hoare', 'Lake Fryxell')))
 
 
 # Calculate lake-specific means
@@ -110,7 +109,7 @@ ggplot(mean_BB, aes(date, albedo.predict.bb, fill = month)) +
   theme(axis.title.x = element_blank())
 
 ####################### Combine plots ############################
-p.ice / p.ice2 / p.sed / p.albedo + 
+p.sed / p.albedo /p.ice2 / p.ice  + 
   plot_layout(guides = 'collect') +
   plot_annotation(tag_levels = 'a', tag_prefix = "(", tag_suffix = ")") &
   theme(plot.tag = element_text(size = 8), 
@@ -118,5 +117,5 @@ p.ice / p.ice2 / p.sed / p.albedo +
         legend.margin = margin(0, 0, 0, 0),  # remove inner margin around the legend box
         legend.box.margin = margin(0, 0, 0, 0))  # remove margin around the legend box area
 
-ggsave("Figures/Figure1_icesedimentTimeseries.png", dpi = 500, 
+ggsave("Figures/Figure3_icesedimentTimeseries.png", dpi = 500, 
        height = 7, width = 6.5)

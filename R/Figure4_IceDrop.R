@@ -2,6 +2,8 @@ library(tidyverse)
 library(broom)
 library(purrr)
 
+source('R/0_GetDDAF.R')
+
 ## Authors
 # Hilary Dugan, Charlie Dougherty
 # Read in CD GEE sed data
@@ -54,8 +56,7 @@ dd.wide = dd |> dplyr::select(-metlocid) |> pivot_wider(names_from = cutoff, val
 # Join sediment and ice thickness data 
 sed.join = ice3 |> left_join(sed2, by = join_by(lake, wateryear)) |> 
   left_join(FRXmet.daily) |> 
-  mutate(lake = factor(lake, levels = c('Lake Fryxell', 'Lake Hoare',
-                                        'East Lake Bonney', 'West Lake Bonney')))
+  mutate(lake = factor(lake, levels = c('West Lake Bonney',  'East Lake Bonney', 'Lake Hoare', 'Lake Fryxell')))
 
 # p1 = ggplot(sed.join) +
 #   geom_smooth(data = sed.join |> filter(wateryear != 2020), 
@@ -92,8 +93,7 @@ p3 = ggplot(sed.join) +
 
 p2 / p3
 
-ggsave("Figures/Figure3_iceDrop.png",
-       height = 4, width = 6.5, dpi = 500)
+ggsave("Figures/Figure4_iceDrop.png", height = 4, width = 6.5, dpi = 500)
 
 # None of these are significant, but linear models aren't very robust with only 6 values 
 sed.join |> group_by(lake) %>%
