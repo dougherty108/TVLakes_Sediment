@@ -47,7 +47,7 @@ ice3 = ice |>
   # summarise(z_water_m = mean(z_water_m, na.rm = T)) |>
   pivot_wider(names_from = group, values_from = z_water_m) |> 
   group_by(lake) |> 
-  mutate(ice.year = -(first - last)) |> 
+  mutate(ice.year = (first - last)) |> 
   mutate(ice.diff = c(-diff(first), NA)) # calculate difference between years
 
 # climate
