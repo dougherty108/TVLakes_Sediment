@@ -163,7 +163,7 @@ rbgFryxell + smaFryxell +
   rbgHoare + smaHoare +
   rbgBonney + smaBonney +
   plot_layout(byrow = TRUE, ncol = 2, nrow = 3, guides = 'collect') +
-  plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+  plot_annotation(tag_levels = 'a',  tag_prefix = "(", tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8))
   
 ggsave('Figures/Figure1_LandsatScenes.png', width = 6.5, height = 7, dpi = 500)

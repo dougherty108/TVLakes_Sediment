@@ -20,7 +20,7 @@ lake_means <- mean_BB |>
             mean_albedo = mean(mean_albedo, na.rm = T))
 
 ##### Plot by lake with lake-specific mean lines
-ggplot(mean_BB, aes(month, sed_mean * 100, fill = month)) + 
+p1 = ggplot(mean_BB, aes(month, sed_mean * 100, fill = month)) + 
 
   geom_point(position = position_jitter(width = 0.2, height = 0.1), size = 1.5, shape = 21, stroke = 0.2) + 
   geom_point(data = lake_means, aes(y = mean_sediment), shape = 22, fill = 'black') +
@@ -32,7 +32,22 @@ ggplot(mean_BB, aes(month, sed_mean * 100, fill = month)) +
   theme_bw(base_size = 9) +
   theme(legend.position = 'none')
 
+p2 = ggplot(mean_BB, aes(month, albedo.predict.wholelake, fill = month)) + 
+  geom_point(position = position_jitter(width = 0.2, height = 0.1), size = 1.5, shape = 21, stroke = 0.2) + 
+  geom_point(data = lake_means, aes(y = mean_albedo), shape = 22, fill = 'black') +
+  scale_fill_manual(values = c('#238a9e','#4ea35e','#d9d138','#eba534','#eb4034')) +
+  facet_wrap(vars(lake), nrow = 1) + 
+  # xlim(as.Date('2016-10-01'), as.Date('2025-02-01')) +
+  xlab("Month") + 
+  ylab("Albedo") + 
+  theme_bw(base_size = 9) +
+  theme(legend.position = 'none')
 
-ggsave("Figures/Figure2_monthlySed.png", height = 2, width = 6.5, dpi = 500)
+
+p1 / p2 +
+  plot_annotation(tag_levels = 'a', tag_prefix = "(", tag_suffix = ")") &
+  theme(plot.tag = element_text(size = 8))
+
+ggsave("Figures/Figure2_monthlySed.png", height = 3.5, width = 6.5, dpi = 500)
 
 

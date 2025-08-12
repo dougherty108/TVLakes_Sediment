@@ -91,7 +91,9 @@ p3 = ggplot(sed.join) +
   facet_wrap(~lake, scales = "free_x", nrow = 1) +
   theme_bw(base_size = 9)
 
-p2 / p3
+p2 / p3 +
+  plot_annotation(tag_levels = 'a', tag_prefix = "(", tag_suffix = ")") &
+  theme(plot.tag = element_text(size = 8))
 
 ggsave("Figures/Figure4_iceDrop.png", height = 4, width = 6.5, dpi = 500)
 
@@ -99,7 +101,7 @@ ggsave("Figures/Figure4_iceDrop.png", height = 4, width = 6.5, dpi = 500)
 sed.join |> group_by(lake) %>%
   nest() %>%
   mutate(
-    model = purrr::map(data, ~ lm(ice.diff ~ albedo.predict.wholelake + warmsunnies + dd, data = .x)),
+    model = purrr::map(data, ~ lm(ice.diff ~ albedo.predict.wholelake, data = .x)),
     results = purrr::map(model, tidy)
   ) %>%
   unnest(results)
