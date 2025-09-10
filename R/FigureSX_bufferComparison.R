@@ -17,7 +17,7 @@ sedJoin = read_csv('DataOut/sedimentResults.csv') |>
 
 #plot of buffered mean vs whole lake mean by lake. 
 ggplot(sedJoin, aes(x = sed_mean * 100, y = sed_mean_bb * 100)) + 
-  geom_abline(size = 0.8) +
+  geom_abline(linewidth = 0.8) +
   geom_point(size = 1, shape = 21) + 
   ylab("Sediment estimate 200 m buffer mean (%)") + 
   xlab("Sediment estimate whole lake mean  (%)") + 

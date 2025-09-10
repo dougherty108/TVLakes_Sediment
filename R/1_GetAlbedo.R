@@ -5,6 +5,7 @@ library(raster)
 library(terra)
 library(stringr)
 library(broom)
+library(patchwork)
 
 # Get meteorological data for Lake Fryxell, Hoare, and Bonney
 source('R/0_GetMet.R')

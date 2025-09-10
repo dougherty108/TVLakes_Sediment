@@ -4,8 +4,8 @@ lakes_df <- data.frame(
   lake = c("Lake Fryxell", "Lake Hoare", "East Lake Bonney", "West Lake Bonney"),
   # lat = c(-77.610275, -77.627703, -77.713515, -77.720000),
   # lon = c(163.146877, 162.910475, 162.449109, 162.299291)
-  lat = c(-77.610275, -77.627703, -77.713515, -77.720000), # Move Lake Hoare slightly to the left to avoid buffer going into Canada Glacier
-  lon = c(163.146877, 162.900475, 162.449109, 162.299291)
+  lat = c(-77.610275, -77.627703, -77.713515, -77.720000), # Move Lake Hoare slightly to the left 100 m to avoid buffer going into Canada Glacier
+  lon = c(163.146877, 162.9063, 162.449109, 162.299291)
 )
 
 # Convert to sf object
