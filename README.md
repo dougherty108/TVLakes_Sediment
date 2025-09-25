@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/974483863.svg)](https://doi.org/10.5281/zenodo.17203006)
+
 Code associated with _Remote Sensing Sediment–Albedo Feedbacks Affecting Ice Thickness on Taylor Valley Lakes, Antarctica_
 Authors: CE Dougherty, HA Dugan, PT Doran, L Zoet, M Salvatore
 
